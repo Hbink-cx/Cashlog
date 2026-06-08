@@ -3,15 +3,14 @@
   "type": "module",
   "version": "1.0.0",
   "description": "个人理财助手 - 支持无限级分类的个人收支分析桌面应用",
-  "author": "Bink",
+  "author": "BinKai Hong",
   "license": "MIT",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron . --dev\"",
-    "build": "tsc -b && vite build",
-    "build:electron": "tsc -b && vite build && node scripts/pack.js",
-    "pack": "node scripts/pack.js",
+    "build": "vite build",
+    "build:electron": "vite build && electron-builder --win --x64 --dir",
     "preview": "vite preview",
     "preview:electron": "vite build && electron . --dev"
   },
@@ -42,41 +41,30 @@
   "build": {
     "appId": "com.bink.finance-app",
     "productName": "个人理财助手",
-    "directories": {
-      "output": "release"
-    },
+    "directories": { "output": "release" },
     "files": [
       "dist/**/*",
       "electron/*.cjs",
       "public/icon.png"
     ],
     "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ],
-      "icon": "public/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "shortcutName": "个人理财助手",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "target": [{ "target": "portable", "arch": ["x64"] }],
+      "icon": "public/icon.png",
+      "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "个人理财助手-${version}-portable.exe"
     },
     "mac": {
-      "target": ["dmg"],
-      "icon": "public/icon.png"
+      "target": [{ "target": "dmg", "arch": ["x64"] }],
+      "icon": "public/icon.png",
+      "category": "public.app-category.finance",
+      "identity": null
     },
     "linux": {
-      "target": ["AppImage"],
-      "icon": "public/icon.png"
+      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "icon": "public/icon.png",
+      "category": "Finance"
     }
   }
 }
