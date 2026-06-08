@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,16 +17,16 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - run: npm install
       - run: npm run build
 
-      - name: Verify Android SDK
-        run: |
-          ls $ANDROID_HOME/platforms/
-          ls $ANDROID_HOME/build-tools/
-          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+      - name: Setup Android SDK path
+        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+
+      - name: Verify
+        run: ls $ANDROID_HOME/platforms/ && ls $ANDROID_HOME/build-tools/
 
       - run: npx cap sync android
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
