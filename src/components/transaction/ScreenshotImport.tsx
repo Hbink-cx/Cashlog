@@ -1,10 +1,8 @@
 import { useState } from 'react'
-import { createWorker } from 'tesseract.js'
-import type { Transaction } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useFlatCategoryList } from '@/hooks/useFinance'
-import { formatCurrency, todayStr, cn } from '@/lib/utils'
-import { Camera, Loader2, Check, X, Sparkles, AlertCircle } from 'lucide-react'
+import { todayStr, cn } from '@/lib/utils'
+import { Camera, Loader2, X, Sparkles, AlertCircle } from 'lucide-react'
 
 // ── 商户 → 分类 关键词匹配表 ──
 const MERCHANT_CATEGORIES: [string, string[]][] = [
@@ -25,7 +23,6 @@ function matchCategory(merchant: string, text: string): string | null {
   return null
 }
 
-// ── 金额提取 ──
 const AMOUNT_PATTERNS = [
   /(?:[¥￥]|RMB\s?|CNY\s?)\s*([0-9,]+\.[0-9]{1,2})/g,
   /(?:金额|付款|消费|支出|扣款)[^0-9]*([0-9,]+\.[0-9]{1,2})/g,
@@ -45,46 +42,32 @@ function extractAmount(text: string): number | null {
   return null
 }
 
-// ── 商户名称提取 ──
 function extractMerchant(text: string): string {
   const lines = text.split(/\n|，|,/).map(l => l.trim()).filter(Boolean)
-
   const patterns = [
     /(?:商户|收款方|对方|商品|商户名称|收款单位)[：:\s]+(.+)/,
     /(?:向|给)\s*(.+?)\s*(?:付款|支付|转账)/,
     /(?:美团|饿了么|滴滴|京东|淘宝|拼多多|肯德基|麦当劳)[^\n]*/,
   ]
-
   for (const p of patterns) {
     for (const line of lines) {
       const m = line.match(p)
       if (m && m[1] && m[1].length > 1 && m[1].length < 40) return m[1].trim()
     }
   }
-
-  // Fallback：取前 20 个字符的第一行有意义文本
   for (const line of lines) {
     const cleaned = line.replace(/[¥￥\d\s*#@!.,;:：，。、！？·「」]/g, '').trim()
     if (cleaned.length >= 2 && cleaned.length < 30) {
-      // 排除明显不是商户名的行
-      if (!/(?:支付|微信|支付宝|余额|银行卡|快捷|付款|收款|账单)/.test(cleaned)) {
-        return cleaned
-      }
+      if (!/(?:支付|微信|支付宝|余额|银行卡|快捷|付款|收款|账单)/.test(cleaned)) return cleaned
     }
   }
-
   return '未识别商户'
 }
 
-// ── 日期提取 ──
 function extractDate(text: string): string {
   const dates = text.match(/(\d{4}[-/年]\d{1,2}[-/月]\d{1,2})/g)
   if (dates) {
-    const cleaned = dates[0]
-      .replace(/年/, '-')
-      .replace(/月/, '-')
-      .replace(/\//g, '-')
-      .replace(/日$/, '')
+    const cleaned = dates[0].replace(/年/, '-').replace(/月/, '-').replace(/\//g, '-').replace(/日$/, '')
     const parts = cleaned.split('-')
     if (parts.length === 3) {
       return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`
@@ -93,7 +76,6 @@ function extractDate(text: string): string {
   return todayStr()
 }
 
-// ── 识别来源 ──
 function detectSource(text: string): 'wechat' | 'alipay' | 'bank' | 'unknown' {
   if (/微信|WeChat|零钱/.test(text)) return 'wechat'
   if (/支付宝|余额宝|花呗|借呗/.test(text)) return 'alipay'
@@ -101,32 +83,17 @@ function detectSource(text: string): 'wechat' | 'alipay' | 'bank' | 'unknown' {
   return 'unknown'
 }
 
-const SOURCE_ICONS: Record<string, string> = {
-  wechat: '💚',
-  alipay: '💙',
-  bank: '🏦',
-  unknown: '📷',
-}
-
-const SOURCE_NAMES: Record<string, string> = {
-  wechat: '微信支付',
-  alipay: '支付宝',
-  bank: '银行卡',
-  unknown: '其他来源',
-}
+const SOURCE_ICONS: Record<string, string> = { wechat: '💚', alipay: '💙', bank: '🏦', unknown: '📷' }
+const SOURCE_NAMES: Record<string, string> = { wechat: '微信支付', alipay: '支付宝', bank: '银行卡', unknown: '其他来源' }
 
 interface ParsedResult {
-  amount: number | null
-  merchant: string
-  date: string
-  source: string
-  suggestedCategoryId: string | null
-  rawText: string
+  amount: number | null; merchant: string; date: string; source: string
+  suggestedCategoryId: string | null; rawText: string
 }
 
 export function ScreenshotImport({ onClose }: { onClose: () => void }) {
   const { addTransaction, state } = useApp()
-  const { transactions, categories } = state.data
+  const { transactions } = state.data
   const catList = useFlatCategoryList('expense')
   const [step, setStep] = useState<'select' | 'ocr' | 'confirm'>('select')
   const [progress, setProgress] = useState(0)
@@ -148,14 +115,16 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
     setProgressText('正在加载 OCR 引擎...')
 
     try {
-      // Use Chinese + English
-      const worker = await createWorker('chi_sim+eng', {
-        logger: (m) => {
+      // Lazy-load tesseract.js only when needed (avoids Electron crash on static import)
+      const { createWorker } = await import('tesseract.js')
+
+      const worker = await createWorker('chi_sim+eng', 1, {
+        logger: (m: any) => {
           if (m.status === 'recognizing text') {
             const pct = Math.round((m.progress || 0) * 100)
             setProgress(pct)
             setProgressText(`识别中… ${pct}%`)
-          } else if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
+          } else {
             setProgressText('加载中文识别引擎…')
           }
         },
@@ -177,29 +146,21 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       const source = detectSource(text)
       const suggestedCat = matchCategory(merchant, text)
 
-      // Dedup: check if similar transaction exists
       const dupExists = amount
         ? transactions.some(
             t => t.amount === amount && t.date === date && Math.abs(new Date(t.date).getTime() - new Date(date).getTime()) < 86400000
           )
         : false
 
-      setParsed({
-        amount,
-        merchant,
-        date,
-        source,
-        suggestedCategoryId: suggestedCat,
-        rawText: text,
-      })
-
+      setParsed({ amount, merchant, date, source, suggestedCategoryId: suggestedCat, rawText: text })
       setConfirmAmount(amount ? amount.toFixed(2) : '')
       setConfirmCategory(suggestedCat || '')
       setConfirmDate(date)
       setConfirmDesc(`${SOURCE_NAMES[source]} · ${merchant}${dupExists ? ' ⚠️ 疑似重复' : ''}`)
       setStep('confirm')
     } catch (err: any) {
-      setError(err.message || 'OCR 识别失败')
+      console.error('OCR failed:', err)
+      setError(err.message || 'OCR 识别失败，请重试')
       setStep('select')
     }
   }
@@ -240,28 +201,18 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
             </div>
             <div>
               <p className="font-semibold">拍摄支付截图</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                支持微信支付、支付宝、银行交易截图
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">支持微信支付、支付宝、银行交易截图</p>
             </div>
             <label className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium cursor-pointer hover:bg-primary/90 transition-colors">
               <Camera className="w-5 h-5" />
               选择截图
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFile}
-                className="hidden"
-              />
+              <input type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
             </label>
-            <p className="text-xs text-muted-foreground">
-              OCR 识别在手机本地完成，不上传图片
-            </p>
+            <p className="text-xs text-muted-foreground">OCR 识别在本地完成，不上传图片</p>
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
-                <AlertCircle className="w-4 h-4" />
-                {error}
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
               </div>
             )}
           </div>
@@ -273,10 +224,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
             <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
             <p className="font-semibold">{progressText}</p>
             <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-300"
-                style={{ width: `${Math.max(progress, 5)}%` }}
-              />
+              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${Math.max(progress, 5)}%` }} />
             </div>
             <p className="text-xs text-muted-foreground">首次使用需下载中文识别包 (~9MB)</p>
           </div>
@@ -285,76 +233,42 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
         {/* Step 3: Confirm */}
         {step === 'confirm' && parsed && (
           <div className="p-5 space-y-4">
-            {/* Detected source */}
             <div className="flex items-center gap-2 text-sm font-medium">
               <span>{SOURCE_ICONS[parsed.source]}</span>
               <span>{SOURCE_NAMES[parsed.source]}</span>
               {parsed.suggestedCategoryId && (
-                <span className="ml-auto px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-full text-xs">
-                  已自动匹配分类
-                </span>
+                <span className="ml-auto px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-full text-xs">已自动匹配分类</span>
               )}
             </div>
-
-            {/* Amount */}
             <div>
               <label className="text-sm font-medium text-muted-foreground">金额</label>
               <div className="relative mt-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">¥</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={confirmAmount}
-                  onChange={e => setConfirmAmount(e.target.value)}
-                  className="w-full pl-10 pr-3 py-3 bg-background border rounded-xl text-2xl font-mono font-bold focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+                <input type="number" step="0.01" value={confirmAmount} onChange={e => setConfirmAmount(e.target.value)}
+                  className="w-full pl-10 pr-3 py-3 bg-background border rounded-xl text-2xl font-mono font-bold focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </div>
-
-            {/* Category */}
             <div>
               <label className="text-sm font-medium text-muted-foreground">分类</label>
-              <select
-                value={confirmCategory}
-                onChange={e => setConfirmCategory(e.target.value)}
-                className="w-full mt-1 px-3 py-3 bg-background border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
+              <select value={confirmCategory} onChange={e => setConfirmCategory(e.target.value)}
+                className="w-full mt-1 px-3 py-3 bg-background border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">选择分类</option>
                 {catList.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {'　'.repeat(c.indent)}{c.name}
-                  </option>
+                  <option key={c.id} value={c.id}>{'　'.repeat(c.indent)}{c.name}</option>
                 ))}
               </select>
             </div>
-
-            {/* Date */}
             <div>
               <label className="text-sm font-medium text-muted-foreground">日期</label>
-              <input
-                type="date"
-                value={confirmDate}
-                onChange={e => setConfirmDate(e.target.value)}
-                className="w-full mt-1 px-3 py-3 bg-background border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <input type="date" value={confirmDate} onChange={e => setConfirmDate(e.target.value)}
+                className="w-full mt-1 px-3 py-3 bg-background border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
-
-            {/* Description */}
             <div>
               <label className="text-sm font-medium text-muted-foreground">描述</label>
-              <input
-                type="text"
-                value={confirmDesc}
-                onChange={e => setConfirmDesc(e.target.value)}
-                className="w-full mt-1 px-3 py-3 bg-background border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <input type="text" value={confirmDesc} onChange={e => setConfirmDesc(e.target.value)}
+                className="w-full mt-1 px-3 py-3 bg-background border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
-
-            {/* Raw text toggle */}
-            <button
-              onClick={() => setShowRaw(!showRaw)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <button onClick={() => setShowRaw(!showRaw)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               {showRaw ? '收起' : '查看'}识别原文
             </button>
             {showRaw && (
@@ -362,20 +276,12 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
                 {parsed.rawText}
               </div>
             )}
-
-            {/* Buttons */}
             <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => { setStep('select'); setParsed(null) }}
-                className="flex-1 py-3 bg-muted rounded-xl font-medium hover:bg-muted/80 transition-colors"
-              >
+              <button onClick={() => { setStep('select'); setParsed(null) }} className="flex-1 py-3 bg-muted rounded-xl font-medium hover:bg-muted/80 transition-colors">
                 重新选择
               </button>
-              <button
-                onClick={handleSave}
-                disabled={!confirmAmount || !confirmCategory}
-                className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-              >
+              <button onClick={handleSave} disabled={!confirmAmount || !confirmCategory}
+                className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
                 确认导入
               </button>
             </div>
