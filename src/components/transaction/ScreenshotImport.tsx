@@ -15,9 +15,17 @@ const MERCHANT_KEYWORDS: [string, string[]][] = [
   ['cat-e-housing', ['房租', '物业', '水电', '天然气', '燃气', '暖气', '水费', '电费']],
 ]
 
-function matchCategory(text: string): string | null {
+const INCOME_CAT: [string, string[]][] = [
+  ['cat-i-salary', ['工资','薪酬','奖金','年终奖','绩效','津贴','加班费']],
+  ['cat-i-side', ['副业','外包','freelance','兼职','稿费','设计','翻译','咨询','佣金']],
+  ['cat-i-invest', ['理财','基金','股票','分红','利息','股息','收益','赎回','增值']],
+  ['cat-i-other', ['红包','退款','报销','转入','收款','存入','提现','转账','别人转']],
+]
+
+function matchCategory(text: string, type: 'income' | 'expense'): string | null {
   const s = text.toLowerCase()
-  for (const [catId, keywords] of MERCHANT_KEYWORDS) {
+  const kws = type === 'income' ? INCOME_CAT : MERCHANT_KEYWORDS
+  for (const [catId, keywords] of kws) {
     if (keywords.some(k => s.includes(k.toLowerCase()))) return catId
   }
   return null
@@ -28,17 +36,19 @@ interface ParsedItem {
   id: number
   merchant: string
   amount: number
+  type: 'income' | 'expense'
+  date: string
   suggestedCategoryId: string | null
 }
 
-function parseTransactions(rawText: string): { items: ParsedItem[]; date: string; source: string } {
+function parseTransactions(rawText: string): { items: ParsedItem[]; source: string } {
   const lines = rawText.split(/\n/).map(l => l.trim()).filter(Boolean)
 
-  // Date
-  let date = todayStr()
-  const dateMatch = rawText.match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/)
-  if (dateMatch) {
-    date = `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`
+  // Global default date
+  let globalDate = todayStr()
+  const globalMatch = rawText.match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/)
+  if (globalMatch) {
+    globalDate = `${globalMatch[1]}-${globalMatch[2].padStart(2, '0')}-${globalMatch[3].padStart(2, '0')}`
   }
 
   // Source
@@ -52,11 +62,23 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
   let id = 0
 
   for (const line of lines) {
-    // Skip header/footer lines
     if (/^(合计|总计|小计|支付|付款方式|当前状态|交易时间|商户单号|对方|收单|微信|支付宝)/.test(line)) continue
     if (/^(快捷支付|零钱通|余额宝|花呗|借呗|储蓄卡|信用卡)$/.test(line)) continue
     if (line.length < 2 || line.length > 80) continue
-    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(line)) continue
+
+    // Check if this line has a date in it, and use it
+    const lineDateMatch = line.match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/)
+    let rowDate = globalDate
+    if (lineDateMatch) {
+      rowDate = `${lineDateMatch[1]}-${lineDateMatch[2].padStart(2, '0')}-${lineDateMatch[3].padStart(2, '0')}`
+      // Strip the date from the line so it doesn't pollute merchant name
+      const stripped = line.replace(/\d{4}[-/]\d{1,2}[-/]\d{1,2}/, '').trim()
+      if (stripped.length < 2) continue
+      // Re-assign line without the date for merchant extraction below
+    } else if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(line)) {
+      // Pure date line, skip
+      continue
+    }
 
     // Find amounts in this line
     const amountRegex = /(?:¥|￥|RMB|CNY)?\s*([0-9,]+\.[0-9]{1,2})\s*$/g
@@ -82,7 +104,7 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
         if (!merchant || merchant.length < 1) merchant = '未知商户'
 
         // Dedup within batch
-        const dedupKey = `${merchant}-${val}`
+        const dedupKey = `${merchant}-${val}-${rowDate}`
         if (seen.has(dedupKey)) continue
         seen.add(dedupKey)
 
@@ -90,7 +112,9 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
           id: id++,
           merchant,
           amount: val,
-          suggestedCategoryId: matchCategory(merchant),
+          type: 'expense',
+          date: rowDate,
+          suggestedCategoryId: matchCategory(merchant, 'expense'),
         })
         foundAmount = true
       }
@@ -98,7 +122,7 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
     }
   }
 
-  return { items, date, source }
+  return { items, source }
 }
 
 const SOURCE_ICONS: Record<string, string> = { wechat: '💚', alipay: '💙', bank: '🏦', unknown: '📷' }
@@ -109,9 +133,9 @@ interface EditingItem extends ParsedItem {
   desc: string
 }
 
+
 export function ScreenshotImport({ onClose }: { onClose: () => void }) {
-  const { addTransaction, state } = useApp()
-  const { transactions } = state.data
+  const { addTransaction } = useApp()
   const catListExpense = useFlatCategoryList('expense')
   const catListIncome = useFlatCategoryList('income')
   const [step, setStep] = useState<'select' | 'ocr' | 'review'>('select')
@@ -120,7 +144,6 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('')
   const [rawText, setRawText] = useState('')
   const [source, setSource] = useState('unknown')
-  const [date, setDate] = useState(todayStr())
   const [editItems, setEditItems] = useState<EditingItem[]>([])
   const [showRaw, setShowRaw] = useState(false)
 
@@ -157,7 +180,6 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       setRawText(text)
       const result = parseTransactions(text)
       setSource(result.source)
-      setDate(result.date)
 
       if (result.items.length === 0) {
         setError('未找到交易记录，请确认截图包含金额和商户信息')
@@ -198,9 +220,9 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       if (item.amount > 0 && item.categoryId) {
         addTransaction({
           amount: item.amount,
-          type: 'expense',
+          type: item.type,
           categoryId: item.categoryId,
-          date,
+          date: item.date,
           description: item.desc || item.merchant,
         })
         count++
@@ -281,14 +303,10 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
         {/* Step 3: Batch review */}
         {step === 'review' && editItems.length > 0 && (
           <div className="p-4 space-y-3">
-            {/* Source + date header */}
+            {/* Source header */}
             <div className="flex items-center gap-3 px-1">
               <span className="text-lg">{SOURCE_ICONS[source]}</span>
               <span className="font-medium">{SOURCE_NAMES[source]}</span>
-              <span className="text-sm text-muted-foreground ml-auto">
-                <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                  className="px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
-              </span>
             </div>
 
             {/* Transaction rows */}
@@ -326,6 +344,8 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <input type="date" value={item.date} onChange={e => updateItem(item.id, 'date', e.target.value)}
+                        className="w-32 px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring flex-shrink-0" />
                       <select
                         value={item.categoryId}
                         onChange={e => updateItem(item.id, 'categoryId', e.target.value)}
