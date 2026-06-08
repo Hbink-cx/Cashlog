@@ -22,44 +22,19 @@ jobs:
           java-version: '21'
 
       - run: npm install
-
       - run: npm run build
 
-      - name: Setup Android SDK
-        run: |
-          ANDROID_HOME=/usr/local/lib/android/sdk
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-          curl -sOL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools-linux-11076708_latest.zip
-          mv cmdline-tools latest
-          rm commandlinetools-linux-11076708_latest.zip
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses 2>/dev/null
-          sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-35" "build-tools;35.0.0" "platform-tools" 2>/dev/null
-          echo "sdk.dir=$ANDROID_HOME" > $GITHUB_WORKSPACE/android/local.properties
+      - name: Set up Android SDK
+        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
-      - name: Generate keystore
-        run: |
-          keytool -genkey -v -keystore $GITHUB_WORKSPACE/android/release.keystore \
-            -alias cashlog -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass cashlog123 -keypass cashlog123 \
-            -dname "CN=Cashlog, OU=Dev, O=Cashlog, L=SZ, ST=GD, C=CN" \
-            -noprompt
+      - name: Copy web assets to Android
+        run: npx cap sync android
 
-      - name: Sync Capacitor
+      - name: Build Debug APK
         run: |
-          cd $GITHUB_WORKSPACE
-          npx cap sync android
-
-      - name: Build APK
-        run: |
-          cd $GITHUB_WORKSPACE/android
+          cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-          cd ..
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
