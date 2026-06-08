@@ -9,6 +9,8 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -24,19 +26,19 @@ jobs:
       - run: npm install
       - run: npm run build
 
-      - name: Set up Android SDK
-        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+      - name: Install Android SDK 34
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" 2>/dev/null || true
 
-      - name: Copy web assets to Android
+      - name: Sync Capacitor
         run: npx cap sync android
 
       - name: Build Debug APK
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: 个人理财助手-android
