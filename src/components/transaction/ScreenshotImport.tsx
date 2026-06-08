@@ -35,32 +35,6 @@ function matchCat(text: string, type: 'income' | 'expense'): string | null {
 const NOISE_WORDS = /^(添加标签|成功|已传输|传输完成|已完成|详情|更多|账单|明细|首页|我的|扫一扫|收付款|零钱|零钱明细|微信支付|支付|支付宝|全部|筛选|搜索|详情|关闭|返回|查看|展开|收起|统计|图表|月账单|年账单|交易记录|扣费|免密|自动续费)$/
 const NOISE_PARTIAL = /(添加标签|查看更多|展开全部|加载中|网络错误|已加载|没有更多)/
 
-// ── 预处理画布函数 ──
-function preprocessImage(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new window.Image()
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')!
-    img.onload = () => {
-      canvas.width = img.width
-      canvas.height = img.height
-      ctx.drawImage(img, 0, 0)
-      // 灰度 + 高对比度
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        const gray = imageData.data[i] * 0.299 + imageData.data[i + 1] * 0.587 + imageData.data[i + 2] * 0.114
-        const contrast = ((gray - 128) * 1.8 + 128)
-        const v = Math.max(0, Math.min(255, contrast)) | 0
-        imageData.data[i] = imageData.data[i + 1] = imageData.data[i + 2] = v
-        imageData.data[i + 3] = 255
-      }
-      ctx.putImageData(imageData, 0, 0)
-      resolve(canvas.toDataURL('image/png'))
-    }
-    img.src = URL.createObjectURL(file)
-  })
-}
-
 // ── 解析结果 ──
 interface BillItem {
   id: number
@@ -208,11 +182,9 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
     setError('')
     setStep('ocr')
     setProgress(0)
-    setProgressText('预处理图片…')
+    setProgressText('加载 OCR 引擎…')
 
     try {
-      const processed = await preprocessImage(file)
-
       const { createWorker } = await import('tesseract.js')
       const worker = await createWorker('chi_sim+eng', 1, {
         logger: (m: any) => {
@@ -222,7 +194,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       })
 
       setProgressText('识别中…')
-      const { data } = await worker.recognize(processed)
+      const { data } = await worker.recognize(file)
       await worker.terminate()
 
       // 使用 lines（带 bbox）的结构化数据
