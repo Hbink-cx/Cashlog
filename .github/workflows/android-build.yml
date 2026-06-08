@@ -1,10 +1,6 @@
 name: Build Android APK
 
-on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
   build:
@@ -12,34 +8,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+        with: { node-version: '22' }
       - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
+        with: { distribution: 'temurin', java-version: '21' }
+      
       - run: npm install
       - run: npm run build
-
-      - name: Setup Android SDK
+      
+      - name: Install Android SDK
         run: |
-          SDK=/tmp/android-sdk
-          mkdir -p $SDK/cmdline-tools
-          cd $SDK/cmdline-tools
-          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cli.zip
-          unzip -qo cli.zip && mv cmdline-tools latest && rm cli.zip
-          yes | ./latest/bin/sdkmanager --sdk_root=$SDK --licenses > /dev/null 2>&1
-          ./latest/bin/sdkmanager --sdk_root=$SDK "platforms;android-35" "build-tools;35.0.0" > /dev/null 2>&1
-          echo "sdk.dir=$SDK" > android/local.properties
-          echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
-
+          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/c.zip
+          unzip -qo /tmp/c.zip -d /tmp/sdk
+          yes | /tmp/sdk/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdkroot --licenses || true
+          /tmp/sdk/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdkroot "platforms;android-35" "build-tools;35.0.0" || true
+          echo "sdk.dir=/tmp/sdkroot" > android/local.properties
+      
       - run: npx cap sync android
-
-      - name: Build APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
-
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      
       - uses: actions/upload-artifact@v4
-        with:
-          name: Cashlog-Android-APK
-          path: android/app/build/outputs/apk/debug/*.apk
+        with: { name: Cashlog-APK, path: 'android/app/build/outputs/apk/debug/*.apk' }
