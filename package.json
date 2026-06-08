@@ -2,7 +2,7 @@
   "name": "finance-app",
   "type": "module",
   "version": "1.0.0",
-  "description": "个人理财助手 - 支持无限级分类的个人收支分析桌面应用",
+  "description": "最棒的本地端免费开源记账软件！无限级分类 · OCR截图导入 · 旭日图桑基图 · 全平台可用 · 零数据上传",
   "author": "BinKai Hong",
   "license": "MIT",
   "main": "electron/main.cjs",
