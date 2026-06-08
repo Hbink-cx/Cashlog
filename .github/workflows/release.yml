@@ -6,50 +6,84 @@ on:
       - 'v*'
 
 jobs:
-  release:
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-
+  build-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
 
       - run: npm run build
 
-      - name: Download Electron & package
-        run: |
-          npx electron-builder --win --x64 --dir -c.win.signAndEditExecutable=false -c.publish=never
-          bash scripts/pack.sh
-        shell: bash
+      - name: Download Electron runtime
+        run: npx electron-builder --win --x64 --dir -c.win.signAndEditExecutable=false -c.publish=never
+        timeout-minutes: 10
 
-      - name: Archive (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          Compress-Archive -Path release/win-unpacked/* -DestinationPath 个人理财助手-win-x64.zip
-        shell: pwsh
+      - name: Package app into resources
+        run: node scripts/pack.js
 
-      - name: Upload (Windows)
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+      - name: Create portable ZIP
+        run: Compress-Archive -Path release/win-unpacked/* -DestinationPath 个人理财助手-win-x64.zip
+
+      - uses: actions/upload-artifact@v4
         with:
           name: windows-portable
           path: 个人理财助手-win-x64.zip
 
-      - name: Upload (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          # macOS uses DMG
-          npx electron-builder --mac --dir -c.publish=never
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Upload (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Build macOS DMG
+        run: npx electron-builder --mac --x64 --dir -c.publish=never
+        timeout-minutes: 10
+
+      - name: Create DMG archive
         run: |
-          npx electron-builder --linux --dir -c.publish=never
+          hdiutil create -volname "个人理财助手" -srcfolder release/mac -ov -format UDZO "个人理财助手-macos.dmg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: 个人理财助手-macos.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Build Linux AppImage
+        run: npx electron-builder --linux --x64 --dir -c.publish=never
+        timeout-minutes: 10
+
+      - name: Archive Linux build
+        run: tar -czf 个人理财助手-linux-x64.tar.gz release/linux-unpacked
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: 个人理财助手-linux-x64.tar.gz
