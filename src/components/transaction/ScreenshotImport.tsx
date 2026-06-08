@@ -135,7 +135,7 @@ interface EditingItem extends ParsedItem {
 
 
 export function ScreenshotImport({ onClose }: { onClose: () => void }) {
-  const { addTransaction } = useApp()
+  const { addTransaction, addCategory, state } = useApp()
   const catListExpense = useFlatCategoryList('expense')
   const catListIncome = useFlatCategoryList('income')
   const [step, setStep] = useState<'select' | 'ocr' | 'review'>('select')
@@ -146,6 +146,16 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
   const [source, setSource] = useState('unknown')
   const [editItems, setEditItems] = useState<EditingItem[]>([])
   const [showRaw, setShowRaw] = useState(false)
+  const [addingCatFor, setAddingCatFor] = useState<{ itemId: number; type: 'income' | 'expense'; parentId: string } | null>(null)
+  const [newCatName, setNewCatName] = useState('')
+
+  const handleAddSubCategory = () => {
+    if (!addingCatFor || !newCatName.trim()) return
+    const parentCat = state.data.categories.find(c => c.id === addingCatFor.parentId)
+    addCategory({ name: newCatName.trim(), type: addingCatFor.type, parentId: addingCatFor.parentId || null, color: parentCat?.color })
+    setNewCatName('')
+    setAddingCatFor(null)
+  }
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -347,16 +357,25 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
                     <div className="flex items-center gap-2">
                       <input type="date" value={item.date} onChange={e => updateItem(item.id, 'date', e.target.value)}
                         className="w-32 px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring flex-shrink-0" />
-                      <select
-                        value={item.categoryId}
-                        onChange={e => updateItem(item.id, 'categoryId', e.target.value)}
-                        className="flex-1 px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        <option value="">选择{ item.type === 'income' ? '收入' : '支出'}分类</option>
-                        {cats.map(c => (
-                          <option key={c.id} value={c.id}>{'　'.repeat(c.indent)}{c.name}</option>
-                        ))}
-                      </select>
+                      <div className="flex-1 flex items-center gap-1">
+                        <select
+                          value={item.categoryId}
+                          onChange={e => updateItem(item.id, 'categoryId', e.target.value)}
+                          className="flex-1 px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">选择{ item.type === 'income' ? '收入' : '支出'}分类</option>
+                          {cats.map(c => (
+                            <option key={c.id} value={c.id}>{'　'.repeat(c.indent)}{c.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => setAddingCatFor({ itemId: item.id, type: item.type, parentId: item.categoryId || '' })}
+                          className="p-1 hover:bg-accent rounded-md flex-shrink-0 text-muted-foreground hover:text-foreground"
+                          title="新增子分类"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                        </button>
+                      </div>
                       <input
                         type="text"
                         value={item.desc}
@@ -365,6 +384,42 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
                         placeholder="备注"
                       />
                     </div>
+
+                    {/* Inline sub-category creation */}
+                    {addingCatFor && addingCatFor.itemId === item.id && (
+                      <div className="flex items-center gap-2 ml-2 pl-2 border-l-2 border-primary/30">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">新增子分类：</span>
+                        <input
+                          type="text"
+                          value={newCatName}
+                          onChange={e => setNewCatName(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleAddSubCategory()}
+                          placeholder="分类名称"
+                          autoFocus
+                          className="flex-1 px-2 py-1 bg-background border rounded text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <span className="text-xs text-muted-foreground">父级：</span>
+                        <select
+                          value={addingCatFor.parentId}
+                          onChange={e => setAddingCatFor(prev => prev ? { ...prev, parentId: e.target.value } : null)}
+                          className="px-2 py-1 bg-background border rounded text-xs focus:outline-none max-w-[120px]"
+                        >
+                          <option value="">根分类</option>
+                          {cats.map(c => (
+                            <option key={c.id} value={c.id}>{'　'.repeat(c.indent)}{c.name}</option>
+                          ))}
+                        </select>
+                        <button onClick={handleAddSubCategory}
+                          disabled={!newCatName.trim()}
+                          className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs font-medium disabled:opacity-50">
+                          创建
+                        </button>
+                        <button onClick={() => { setNewCatName(''); setAddingCatFor(null) }}
+                          className="px-2 py-1 bg-muted rounded text-xs">
+                          取消
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => removeItem(item.id)}
