@@ -9,15 +9,11 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -26,19 +22,23 @@ jobs:
       - run: npm install
       - run: npm run build
 
-      - name: Install Android SDK 34
+      - name: Download Android SDK
         run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" 2>/dev/null || true
+          curl -sLO https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -qo commandlinetools-linux-11076708_latest.zip
+          mkdir -p ~/android-sdk/cmdline-tools
+          mv cmdline-tools ~/android-sdk/cmdline-tools/latest
+          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
+          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platforms;android-34" "build-tools;34.0.0"
+          echo "sdk.dir=$HOME/android-sdk" > android/local.properties
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build Debug APK
+      - name: Build APK
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: 个人理财助手-android
