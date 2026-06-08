@@ -317,11 +317,12 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
                 <div key={item.id} className={cn("flex items-center gap-2 p-3 rounded-xl group hover:bg-muted transition-colors border", item.type === 'income' ? "bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200/50" : "bg-red-50/60 dark:bg-red-950/20 border-red-200/50")}>
                   <button
                     onClick={() => toggleType(item.id)}
-                    className="flex-shrink-0 p-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: item.type === 'income' ? '#dcfce7' : '#fecaca' }}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors text-xs font-medium"
+                    style={{ backgroundColor: item.type === 'income' ? '#dcfce7' : '#fecaca', color: item.type === 'income' ? '#16a34a' : '#dc2626' }}
                     title="点击切换收入/支出"
                   >
-                    {item.type === 'income' ? <TrendingUp className="w-4 h-4 text-emerald-600" /> : <TrendingDown className="w-4 h-4 text-red-500" />}
+                    {item.type === 'income' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                    {item.type === 'income' ? '收入' : '支出'}
                   </button>
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center gap-2">
