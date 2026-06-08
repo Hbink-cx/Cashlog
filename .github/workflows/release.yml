@@ -1,0 +1,55 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Download Electron & package
+        run: |
+          npx electron-builder --win --x64 --dir -c.win.signAndEditExecutable=false -c.publish=never
+          bash scripts/pack.sh
+        shell: bash
+
+      - name: Archive (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          Compress-Archive -Path release/win-unpacked/* -DestinationPath 个人理财助手-win-x64.zip
+        shell: pwsh
+
+      - name: Upload (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: 个人理财助手-win-x64.zip
+
+      - name: Upload (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # macOS uses DMG
+          npx electron-builder --mac --dir -c.publish=never
+
+      - name: Upload (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          npx electron-builder --linux --dir -c.publish=never
