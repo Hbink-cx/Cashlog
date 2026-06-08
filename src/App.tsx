@@ -30,12 +30,12 @@ function AppContent() {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
         <Header />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-auto">
           {renderPage()}
         </main>
-        <footer className="border-t py-3 px-6 text-center text-xs text-muted-foreground">
+        <footer className="border-t py-2 lg:py-3 px-4 lg:px-6 text-center text-xs text-muted-foreground">
           个人理财助手 · 数据存储在本地浏览器 · 无限级分类管理
         </footer>
       </div>

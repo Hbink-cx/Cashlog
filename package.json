@@ -36,19 +36,29 @@
     "tailwindcss": "^3.4.15",
     "typescript": "~5.6.2",
     "vite": "^6.0.0",
+    "vite-plugin-pwa": "^1.3.0",
     "wait-on": "^8.0.1"
   },
   "build": {
     "appId": "com.bink.finance-app",
     "productName": "个人理财助手",
-    "directories": { "output": "release" },
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**/*",
       "electron/*.cjs",
       "public/icon.png"
     ],
     "win": {
-      "target": [{ "target": "portable", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "public/icon.png",
       "signAndEditExecutable": false
     },
@@ -56,12 +66,26 @@
       "artifactName": "个人理财助手-${version}-portable.exe"
     },
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "public/icon.png",
       "category": "public.app-category.finance"
     },
     "linux": {
-      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "public/icon.png",
       "category": "Finance"
     }

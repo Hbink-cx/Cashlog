@@ -5,6 +5,8 @@
 [![Windows](https://img.shields.io/badge/Windows-✅-0078D6?logo=windows&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
 [![macOS](https://img.shields.io/badge/macOS-✅-000000?logo=apple&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
 [![Linux](https://img.shields.io/badge/Linux-✅-FCC624?logo=linux&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
+[![iOS](https://img.shields.io/badge/iOS-PWA-999999?logo=apple&style=flat-square)](#-移动端-pwa)
+[![Android](https://img.shields.io/badge/Android-PWA-3DDC84?logo=android&style=flat-square)](#-移动端-pwa)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Release](https://img.shields.io/badge/release-v1.0.0-blue?style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
 
@@ -191,6 +193,17 @@
 
 Windows 用户还可以下载源码后运行 `启动理财助手.bat`。
 
+### 📱 移动端（PWA）
+
+无需下载 App Store，手机浏览器打开网址即可安装到桌面：
+
+1. **iPhone / iPad**：Safari 打开网址 → 点击底部「分享」→「添加到主屏幕」
+2. **Android**：Chrome 打开网址 → 点击右上角「⋮」→「添加到主屏幕」/「安装应用」
+
+安装后独立运行，全屏无浏览器边框，支持离线使用。
+
+> 💡 部署 PWA 只需将 `dist/` 目录上传到任意静态托管（GitHub Pages / Vercel / Netlify / Cloudflare Pages），即可获得访问网址。
+
 ### 开发运行
 
 ```bash
@@ -255,6 +268,7 @@ Budget（预算）
 | 图表 | ECharts 5 | 原生支持旭日图/桑基图 |
 | 桌面壳 | Electron 33 | 跨平台，自定义 `app://` 协议 |
 | 打包 | electron-builder | NSIS/portable/DMG/AppImage |
+| PWA | vite-plugin-pwa + Workbox | iOS/Android 安装到桌面，离线可用 |
 | 存储 | LocalStorage | 零依赖，本地优先 |
 | CI/CD | GitHub Actions | 自动构建三平台安装包 |
 
