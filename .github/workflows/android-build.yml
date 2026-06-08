@@ -22,28 +22,35 @@ jobs:
       - run: npm install
       - run: npm run build
 
-      - name: Install Android SDK
+      - name: Setup Android SDK
         run: |
-          set -e
-          
-          # Download cmdline-tools
-          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -o /tmp/cmdline.zip
-          unzip -qo /tmp/cmdline.zip -d /tmp
-          
-          # Install SDK 33
-          yes | /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk --licenses > /dev/null 2>&1
-          /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk "platforms;android-33" "build-tools;33.0.2" > /dev/null 2>&1
-          
+          echo "=== Downloading Android cmdline-tools ==="
+          curl -sL "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" -o /tmp/cmdline.zip
+          ls -la /tmp/cmdline.zip
+          unzip -qo /tmp/cmdline.zip -d /tmp/cmdline-tools
+          ls -la /tmp/cmdline-tools/
+          ls -la /tmp/cmdline-tools/cmdline-tools/bin/
+          echo "=== Installing SDK 33 ==="
+          yes | /tmp/cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk --licenses
+          /tmp/cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk "platforms;android-33" "build-tools;33.0.2"
+          echo "=== Writing local.properties ==="
           echo "sdk.dir=/tmp/sdk" > android/local.properties
-          echo "Android SDK installed to /tmp/sdk"
+          cat android/local.properties
+          echo "=== SDK contents ==="
+          ls /tmp/sdk/platforms/
+          ls /tmp/sdk/build-tools/
+
+      - name: Sync Capacitor
+        run: npx cap sync android
 
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: Cashlog-Android
           path: android/app/build/outputs/apk/debug/*.apk
