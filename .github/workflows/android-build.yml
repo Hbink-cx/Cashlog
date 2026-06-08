@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Bubblewrap)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -19,38 +19,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - run: npm install
-      - run: npm run build
+      - name: Install dependencies
+        run: npm install
 
-      - name: Setup Android SDK
+      - name: Generate keystore
         run: |
-          echo "=== Downloading Android cmdline-tools ==="
-          curl -sL "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" -o /tmp/cmdline.zip
-          ls -la /tmp/cmdline.zip
-          unzip -qo /tmp/cmdline.zip -d /tmp/cmdline-tools
-          ls -la /tmp/cmdline-tools/
-          ls -la /tmp/cmdline-tools/cmdline-tools/bin/
-          echo "=== Installing SDK 33 ==="
-          yes | /tmp/cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk --licenses
-          /tmp/cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk "platforms;android-33" "build-tools;33.0.2"
-          echo "=== Writing local.properties ==="
-          echo "sdk.dir=/tmp/sdk" > android/local.properties
-          cat android/local.properties
-          echo "=== SDK contents ==="
-          ls /tmp/sdk/platforms/
-          ls /tmp/sdk/build-tools/
-
-      - name: Sync Capacitor
-        run: npx cap sync android
+          keytool -genkey -v -keystore android-twa/android.keystore \
+            -alias cashlog -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass cashlog123 -keypass cashlog123 \
+            -dname "CN=Test, O=Test, C=CN" -noprompt
 
       - name: Build APK
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          cd android-twa
+          npx @bubblewrap/cli build
 
       - uses: actions/upload-artifact@v4
-        if: success()
         with:
           name: Cashlog-Android
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: android-twa/*.apk

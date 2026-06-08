@@ -1,0 +1,40 @@
+{
+  "packageId": "com.bink.cashlog",
+  "host": "hbink-cx.github.io",
+  "name": "Cashlog",
+  "launcherName": "Cashlog",
+  "display": "standalone",
+  "themeColor": "#22c55e",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": false,
+  "startUrl": "/Cashlog/",
+  "iconUrl": "https://github.com/Hbink-cx/Cashlog/raw/main/public/icon-512x512.png",
+  "maskableIconUrl": "https://github.com/Hbink-cx/Cashlog/raw/main/public/icon-512x512.png",
+  "monochromeIconUrl": "https://github.com/Hbink-cx/Cashlog/raw/main/public/icon-192x192.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "cashlog"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://hbink-cx.github.io/Cashlog/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1.0.0"
+}
