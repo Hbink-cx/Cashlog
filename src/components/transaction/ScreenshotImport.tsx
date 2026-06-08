@@ -35,6 +35,21 @@ function matchCat(text: string, type: 'income' | 'expense'): string | null {
 const NOISE_WORDS = /^(添加标签|成功|已传输|传输完成|已完成|详情|更多|账单|明细|首页|我的|扫一扫|收付款|零钱|零钱明细|微信支付|支付|支付宝|全部|筛选|搜索|详情|关闭|返回|查看|展开|收起|统计|图表|月账单|年账单|交易记录|扣费|免密|自动续费)$/
 const NOISE_PARTIAL = /(添加标签|查看更多|展开全部|加载中|网络错误|已加载|没有更多)/
 
+function fileToImageData(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0)
+      resolve(canvas.toDataURL('image/png'))
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 // ── 解析结果 ──
 interface BillItem {
   id: number
@@ -185,6 +200,8 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
     setProgressText('加载 OCR 引擎…')
 
     try {
+      const dataUrl = await fileToImageData(file)
+
       const { createWorker } = await import('tesseract.js')
       const worker = await createWorker('chi_sim+eng', 1, {
         logger: (m: any) => {
@@ -194,7 +211,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       })
 
       setProgressText('识别中…')
-      const { data } = await worker.recognize(file)
+      const { data } = await worker.recognize(dataUrl)
       await worker.terminate()
 
       // 使用 lines（带 bbox）的结构化数据
