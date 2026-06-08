@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm ci
+      - run: npm install
       - run: DEPLOY_TARGET=pages npm run build
 
       - uses: actions/configure-pages@v5
