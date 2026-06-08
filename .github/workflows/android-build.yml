@@ -41,7 +41,7 @@ jobs:
           ./latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platforms;android-35" "build-tools;35.0.0" "platform-tools" > /dev/null 2>&1
 
           # Create local.properties
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > $GITHUB_WORKSPACE/android/local.properties
 
       - name: Generate keystore
         run: |
