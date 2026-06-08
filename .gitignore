@@ -7,3 +7,9 @@ release2/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+android/release.keystore
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/capacitor-cordova-android-plugins/

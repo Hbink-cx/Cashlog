@@ -1,0 +1,54 @@
+name: Build Android APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - run: npm install
+
+      - run: npm run build
+
+      - name: Generate keystore
+        run: |
+          keytool -genkey -v -keystore android/release.keystore \
+            -alias cashlog -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass cashlog123 -keypass cashlog123 \
+            -dname "CN=BinKai Hong, OU=Dev, O=Cashlog, L=Shenzhen, ST=Guangdong, C=CN"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0'
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          cd ..
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 个人理财助手-android
+          path: android/app/build/outputs/apk/release/*.apk

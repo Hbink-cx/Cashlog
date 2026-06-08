@@ -196,6 +196,7 @@
 | 🪟 Windows | `个人理财助手-win-x64.zip` — 解压后双击 `个人理财助手.exe` |
 | 🍎 macOS | `个人理财助手-macos-x64.zip` — 解压运行 |
 | 🐧 Linux | `个人理财助手-linux-x64.tar.gz` — 解压运行 |
+| 🤖 Android | `个人理财助手-android.apk` — 下载安装（允许"未知来源"） |
 
 Windows 用户还可以下载源码后运行 `启动理财助手.bat`。
 

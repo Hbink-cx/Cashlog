@@ -11,10 +11,14 @@
     "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron . --dev\"",
     "build": "vite build",
     "build:electron": "vite build && electron-builder --win --x64 --dir",
+    "build:android": "vite build && npx cap sync android && cd android && gradlew assembleRelease && cd ..",
     "preview": "vite preview",
     "preview:electron": "vite build && electron . --dev"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^7.6.6",
+    "@capacitor/core": "^8.4.0",
     "clsx": "^2.1.1",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
