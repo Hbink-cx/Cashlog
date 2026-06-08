@@ -13,36 +13,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - run: npm install
       - run: npm run build
-      - name: Package Electron
+      - name: Electron pack
         run: npx electron-builder --win --x64 --dir
         timeout-minutes: 15
-      - name: Create ZIP
-        run: Compress-Archive -Path release\win-unpacked\* -DestinationPath release\个人理财助手-win-x64.zip
+      - name: Zip
+        run: Compress-Archive -Path release/win-unpacked/* -DestinationPath release/个人理财助手-win-x64.zip
       - uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: release/个人理财助手-win-x64.zip
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-13
     env:
-      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+      CSC_FOR_PULL_REQUEST: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - run: npm install
       - run: npm run build
-      - name: Package Electron
+      - name: Electron pack
         run: npx electron-builder --mac --x64 --dir
         timeout-minutes: 15
-      - name: Create ZIP
-        run: |
-          cd release
-          zip -r 个人理财助手-macos-x64.zip mac
+      - name: Zip
+        run: cd release && zip -r 个人理财助手-macos-x64.zip mac
       - uses: actions/upload-artifact@v4
         with:
           name: macos-build
@@ -55,15 +54,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - run: npm install
       - run: npm run build
-      - name: Package Electron
+      - name: Electron pack
         run: npx electron-builder --linux --x64 --dir
         timeout-minutes: 15
-      - name: Create TAR
-        run: |
-          cd release
-          tar -czf 个人理财助手-linux-x64.tar.gz linux-unpacked
+      - name: Tar
+        run: cd release && tar -czf 个人理财助手-linux-x64.tar.gz linux-unpacked
       - uses: actions/upload-artifact@v4
         with:
           name: linux-build
@@ -79,32 +76,26 @@ jobs:
         with:
           path: artifacts
 
-      - name: List artifacts
-        run: find artifacts -type f
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           name: "个人理财助手 v1.0.0"
           body: |
-            ## 📥 下载
+            ## 下载
 
-            | 平台 | 文件 |
-            |------|------|
-            | 🪟 Windows | `个人理财助手-win-x64.zip` — 解压后双击 `个人理财助手.exe` |
-            | 🍎 macOS | `个人理财助手-macos-x64.zip` — 解压后运行 `.app` |
-            | 🐧 Linux | `个人理财助手-linux-x64.tar.gz` — 解压后运行 `electron` |
+            | 平台 | 文件 | 说明 |
+            |------|------|------|
+            | Windows | `个人理财助手-win-x64.zip` | 解压后双击 `个人理财助手.exe` |
+            | macOS | `个人理财助手-macos-x64.zip` | 解压后运行 `.app` |
+            | Linux | `个人理财助手-linux-x64.tar.gz` | 解压后运行 `electron` |
 
-            ## ✨ 功能
+            ## 功能亮点
 
-            - 🌳 无限级分类管理
-            - 📊 旭日图 + 桑基图可视化
-            - 🎯 智能预算追踪 + 超限预警
-            - 🌓 深色模式
-            - 💾 本地存储，隐私无忧
+            - 无限级分类管理
+            - 旭日图 + 桑基图可视化分析
+            - 智能预算追踪 + 超限预瑦
+            - 深色模式
+            - 本地存储，数据零上传
           files: |
             artifacts/windows-build/个人理财助手-win-x64.zip
             artifacts/macos-build/个人理财助手-macos-x64.zip
             artifacts/linux-build/个人理财助手-linux-x64.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
