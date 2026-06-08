@@ -49,7 +49,8 @@
     "files": [
       "dist/**/*",
       "electron/*.cjs",
-      "public/icon.png"
+      "public/icon.png",
+      "public/收款码.jpg"
     ],
     "win": {
       "target": [
