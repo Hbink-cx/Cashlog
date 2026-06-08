@@ -19,22 +19,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
 
       - name: Generate keystore
-        run: |
-          keytool -genkey -v -keystore android-twa/android.keystore \
-            -alias cashlog -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass cashlog123 -keypass cashlog123 \
-            -dname "CN=Test, O=Test, C=CN" -noprompt
+        run: keytool -genkey -v -keystore android-twa/android.keystore -alias cashlog -keyalg RSA -keysize 2048 -validity 10000 -storepass cashlog123 -keypass cashlog123 -dname "CN=Test, O=Test, C=CN" -noprompt
 
       - name: Build APK
-        run: |
-          cd android-twa
-          npx @bubblewrap/cli build
+        run: echo "y" | npx @bubblewrap/cli build --jdkPath $JAVA_HOME
+        working-directory: android-twa
 
       - uses: actions/upload-artifact@v4
         with:
           name: Cashlog-Android
-          path: android-twa/*.apk
+          path: android-twa/**/*.apk
