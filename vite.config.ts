@@ -6,6 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+const isPages = process.env.DEPLOY_TARGET === 'pages'
+
 export default defineConfig({
   plugins: [
     react(),
@@ -20,8 +22,8 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait-primary',
-        scope: '/',
-        start_url: '/',
+        scope: isPages ? '/finance-app/' : '/',
+        start_url: isPages ? '/finance-app/' : '/',
         icons: [
           { src: 'icon-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -40,7 +42,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: './',
+  base: isPages ? '/finance-app/' : './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
