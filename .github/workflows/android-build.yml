@@ -1,4 +1,4 @@
-name: Build Android APK (Bubblewrap)
+name: Build Android APK
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,18 +17,25 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - run: npm install
+      - run: npm run build
 
-      - name: Generate keystore
-        run: keytool -genkey -v -keystore android-twa/android.keystore -alias cashlog -keyalg RSA -keysize 2048 -validity 10000 -storepass cashlog123 -keypass cashlog123 -dname "CN=Test, O=Test, C=CN" -noprompt
+      - name: Install Android SDK 35
+        run: |
+          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cli.zip
+          unzip -qo /tmp/cli.zip -d /tmp
+          yes | /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk --licenses > /dev/null 2>&1
+          /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk "platforms;android-35" "build-tools;35.0.0"
+          echo "sdk.dir=/tmp/sdk" > android/local.properties
+
+      - run: npx cap sync android
 
       - name: Build APK
-        run: echo "y" | npx @bubblewrap/cli build --jdkPath $JAVA_HOME
-        working-directory: android-twa
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
           name: Cashlog-Android
-          path: android-twa/**/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
