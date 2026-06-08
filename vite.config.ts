@@ -15,9 +15,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'icon-180x180.png'],
       manifest: {
-        name: '个人理财助手',
-        short_name: '理财助手',
-        description: '支持无限级分类的个人收支分析与理财软件',
+        name: 'Cashlog',
+        short_name: 'Cashlog',
+        description: '支持无限级分类的个人收支分析记账软件',
         theme_color: '#22c55e',
         background_color: '#ffffff',
         display: 'standalone',

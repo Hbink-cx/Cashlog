@@ -1,14 +1,17 @@
-# 💰 个人理财助手
+# 💰 Cashlog
 
-> 支持**无限级子分类**的桌面记账软件 —— 数据始终存于本地，隐私无忧。
+> **当前最棒的本地端免费开源记账软件！**  
+> 无限级分类 · 截图 OCR 批量导入 · 双向趋势图 · 旭日图 & 桑基图 · 全平台可用 · 数据零上传
 
 [![Windows](https://img.shields.io/badge/Windows-✅-0078D6?logo=windows&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
 [![macOS](https://img.shields.io/badge/macOS-✅-000000?logo=apple&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
 [![Linux](https://img.shields.io/badge/Linux-✅-FCC624?logo=linux&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
-[![iOS](https://img.shields.io/badge/iOS-PWA-999999?logo=apple&style=flat-square)](#-移动端-pwa)
-[![Android](https://img.shields.io/badge/Android-PWA-3DDC84?logo=android&style=flat-square)](#-移动端-pwa)
+[![iOS](https://img.shields.io/badge/iOS-PWA-999999?logo=apple&style=flat-square)](https://hbink-cx.github.io/finance-app/)
+[![Android](https://img.shields.io/badge/Android-PWA-3DDC84?logo=android&style=flat-square)](https://hbink-cx.github.io/finance-app/)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Release](https://img.shields.io/badge/release-v1.0.0-blue?style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
+
+**🌐 PWA 在线版**: **[hbink-cx.github.io/finance-app](https://hbink-cx.github.io/finance-app/)** — 手机浏览器打开直接安装到桌面！
 
 ---
 
@@ -18,6 +21,7 @@
 - [📊 案例演示：上班族的月度财务分析](#-案例演示上班族的月度财务分析)
 - [🧭 功能页面](#-功能页面)
 - [🚀 快速开始](#-快速开始)
+- [🗺 路线图](#-路线图)
 - [🏗 数据模型](#-数据模型)
 - [🧱 技术栈](#-技术栈)
 - [📦 发布流程](#-发布流程)
@@ -29,19 +33,20 @@
 | 特性 | 说明 |
 |------|------|
 | 🌳 **无限级分类** | 餐饮 → 外食 → 午餐外卖 → 汉堡王，任意嵌套，自定义颜色 |
+| 📸 **截图 OCR 导入** | 微信/支付宝/银行账单截图 → 本地 OCR 自动解析 → 批量导入，支持内联创建子分类 |
 | 📊 **层级可视化** | ECharts 旭日图展示多级分类占比，桑基图展示资金流向 |
 | 📈 **趋势分析** | 双向柱状图 + 结余曲线，收入（上绿）/ 支出（下红）一目了然 |
-| 🎯 **智能预算** | 支持月度/年度预算，实时进度条，超额红色警告 |
+| 🎯 **智能预算** | 月度/年度预算，实时进度条，超 80% 黄灯 · 超 100% 红灯警告 |
+| 💻🖥️📱 **全平台覆盖** | Windows/macOS/Linux 桌面版 + PWA 手机版（iOS & Android 安装到桌面） |
 | 🌓 **深色模式** | 一键切换，护眼舒适 |
-| 📥 **数据主权** | 所有数据存储在本地 LocalStorage，零网络请求 |
-| 🔄 **导入导出** | JSON 一键备份/恢复，数据永远属于你 |
-| 📸 **截图导入** | 微信/支付宝账单截图 → OCR 自动识别 → 批量导入，支持增减收支和内联创建子分类 |
+| 🔒 **隐私第一** | 纯本地存储，无服务端、无上传、无追踪，数据完全属于你 |
+| 🔄 **数据自由** | JSON 一键导入/导出，随时备份、换机迁移不受限 |
 
 ---
 
 ## 📊 案例演示：上班族的月度财务分析
 
-> 以下展示一个典型用户（月薪 ¥18,000 的上班族）从零开始使用本软件的场景。
+> 以下展示一个典型用户（月薪 ¥18,000 的上班族）从零开始使用 Cashlog 的场景。
 
 ### 第一步：建立分类体系
 
@@ -72,7 +77,7 @@
 
 ### 第二步：日常记账
 
-用户每天在「**流水**」页记录交易：
+用户每天在「**流水**」页记录交易——可以手动录入，也可以**截一张微信/支付宝账单页**直接批量导入：
 
 | 日期 | 类型 | 分类路径 | 金额 | 描述 |
 |------|------|----------|------|------|
@@ -127,7 +132,7 @@
 - **桑基图**：收入（工资 → 总收入 · 副业 → 总收入）→ 总支出 → 各支出分类 + 储蓄。资金流向一目了然。
 - **趋势图**：全年 12 个月的收入/支出/结余变化。
 
-> **洞察**：用户发现「餐饮 > 外食」占总支出 35%，决定减少外卖频率。副业收入月均 ¥2,500，考虑加大投入。
+> **洞察**：用户发现「餐饮 > 外食」占总支出 35%，决定减少外卖。副业月均 ¥2,500，考虑加大投入。
 
 ---
 
@@ -146,8 +151,9 @@
 - 按月切换浏览（◀ 2025年6月 ▶）
 - 按类型（全部/收入/支出）、分类、关键词筛选
 - 当月合计（收入 / 支出 / 结余 / 笔数）
-- 新增 / 编辑交易弹窗表单
-- 删除确认保护
+- **✨ 截图导入**：微信/支付宝/银行账单截图 → OCR 解析 → 批量导入
+- 导入时支持内联创建子分类、逐笔手动切换收入/支出
+- 新增 / 编辑交易弹窗表单，删除确认保护
 
 ### 3. 分类（Categories）
 
@@ -174,6 +180,7 @@
 ### 全局功能
 
 - 🌓 深色模式一键切换
+- 📸 OCR 截图批量导入（微信/支付宝/银行卡）
 - 📥 JSON 数据导出备份
 - 📤 JSON 数据导入恢复
 - 💾 自动 LocalStorage 持久化，页面刷新不丢失
@@ -182,7 +189,7 @@
 
 ## 🚀 快速开始
 
-### 下载安装
+### 💻 桌面版下载
 
 从 [Releases](https://github.com/Hbink-cx/finance-app/releases) 页面下载对应平台安装包：
 
@@ -194,18 +201,19 @@
 
 Windows 用户还可以下载源码后运行 `启动理财助手.bat`。
 
-### 📱 移动端（PWA）
+### 📱 PWA 手机版（iOS & Android）
 
-无需下载 App Store，手机浏览器打开网址即可安装到桌面：
+**即开即用，无需下载 App Store！**
 
-1. **iPhone / iPad**：Safari 打开网址 → 点击底部「分享」→「添加到主屏幕」
-2. **Android**：Chrome 打开网址 → 点击右上角「⋮」→「添加到主屏幕」/「安装应用」
+🌐 打开 **[hbink-cx.github.io/finance-app](https://hbink-cx.github.io/finance-app/)** → 添加到桌面：
 
-安装后独立运行，全屏无浏览器边框，支持离线使用。
+| iPhone / iPad | Android |
+|---------------|---------|
+| Safari 打开 → 底部「分享」→「添加到主屏幕」 | Chrome 打开 → 右上角 ⋮ →「安装应用」 |
 
-> 💡 部署 PWA 只需将 `dist/` 目录上传到任意静态托管（GitHub Pages / Vercel / Netlify / Cloudflare Pages），即可获得访问网址。
+安装后以全屏模式独立运行，支持离线使用（首次联网下载 OCR 中文包后即可离线）。
 
-### 开发运行
+### 🛠 开发运行
 
 ```bash
 # 克隆
@@ -224,6 +232,21 @@ npm run dev:electron           # 自动打开 Electron 窗口
 # 打包桌面应用
 npm run build:electron         # → release/win-unpacked/
 ```
+
+---
+
+## 🗺 路线图
+
+正在规划中的功能，欢迎贡献代码或提出建议！
+
+| 优先级 | 功能 | 状态 |
+|--------|------|------|
+| 🔴 高 | **原生 App 发布**（Capacitor 封装 → App Store / Google Play 上架） | 计划中 |
+| 🔴 高 | **多端数据同步**（WebDAV / 自建同步服务 / 文件云同步） | 计划中 |
+| 🟡 中 | **银行账单 CSV 智能解析**（一套规则覆盖主流银行 + 微信/支付宝 CSV） | 计划中 |
+| 🟡 中 | **周期账单提醒**（房租、订阅续费等定期通知） | 计划中 |
+| 🟢 低 | **多币种支持** | 计划中 |
+| 🟢 低 | **家庭成员共享账本** | 计划中 |
 
 ---
 
@@ -267,27 +290,12 @@ Budget（预算）
 | 样式 | Tailwind CSS 3 | 原子化 CSS，暗色模式 |
 | 图标 | Lucide React | 轻量，Tree-shakable |
 | 图表 | ECharts 5 | 原生支持旭日图/桑基图 |
+| OCR | Tesseract.js | 纯浏览器端离线识别，零上传 |
 | 桌面壳 | Electron 33 | 跨平台，自定义 `app://` 协议 |
 | 打包 | electron-builder | NSIS/portable/DMG/AppImage |
 | PWA | vite-plugin-pwa + Workbox | iOS/Android 安装到桌面，离线可用 |
-| 存储 | LocalStorage | 零依赖，本地优先 |
-| CI/CD | GitHub Actions | 自动构建三平台安装包 |
-
----
-
-## 📸 截图导入功能
-
-一键批量导入微信/支付宝/银行账单，无需手动输入：
-
-1. 在「**流水**」页面点击绿色的「✨ 截图导入」按钮
-2. 选择或拍摄微信/支付宝账单截图（多笔记录列表页）
-3. 本地 OCR 引擎逐行识别 → 自动提取商户名和金额
-4. 预览列表确认，逐笔选择收入/支出分类
-5. 自动匹配已有分类（美团→餐饮>外食，滴滴→交通>打车…）
-6. **批量导入**前可逐笔修改金额、商户名、日期
-7. 点击 + 号可**内联创建子分类**，无需切换页面
-
-> 🔒 所有 OCR 识别在手机/电脑本地完成，截图不上传任何服务器。
+| 存储 | LocalStorage | 零依赖，隐私优先 |
+| CI/CD | GitHub Actions | 自动构建三平台安装包 + GitHub Pages 部署 |
 
 ---
 
@@ -302,25 +310,20 @@ git push origin v1.0.0
 
 CI 将自动：
 1. 编译 TypeScript → Vite 打包前端
-2. 下载 Electron 运行时
-3. 输出 `release/win-unpacked/` 便携版
-4. 作为 Release 附件上传
-
-手动本地打包：
-
-```bash
-npm run build:electron
-# 产物：release/win-unpacked/electron.exe
-```
+2. GitHub Actions 构建 Windows/macOS/Linux 三平台安装包
+3. 部署 PWA 到 GitHub Pages
+4. 发布 Release 附件供下载
 
 ---
 
 ## ☕ 支持作者
 
-如果这个项目对你有帮助，欢迎请作者喝杯咖啡 ☕
+Cashlog 是完全免费的开源软件，你的打赏将直接用于项目开发和维护。
 
 <p align="center">
   <img src="https://github.com/Hbink-cx/finance-app/blob/main/public/donate.jpg?raw=true" width="280" alt="收款码" />
+  <br />
+  <sub>所有收入将用于项目开发与持续维护 💚</sub>
 </p>
 
 ---
