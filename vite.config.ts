@@ -34,6 +34,16 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
+            urlPattern: /^https:\/\/tesseract\.projectnaptha\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'tesseract-lang', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+          },
+          {
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*tesseract.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'tesseract-lang', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: { cacheName: 'google-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },

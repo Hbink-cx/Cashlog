@@ -3,7 +3,8 @@ import { useApp } from '@/context/AppContext'
 import { useFlatCategoryList } from '@/hooks/useFinance'
 import { formatCurrency, formatDate, todayStr, currentYear, currentMonth, getMonthRange, cn } from '@/lib/utils'
 import type { Transaction } from '@/types'
-import { Plus, Pencil, Trash2, Search, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Filter, X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { ScreenshotImport } from '@/components/transaction/ScreenshotImport'
 
 export function TransactionList() {
   const { state, deleteTransaction } = useApp()
@@ -15,6 +16,7 @@ export function TransactionList() {
   const [year, setYear] = useState(currentYear())
   const [month, setMonth] = useState(currentMonth())
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [showScreenshot, setShowScreenshot] = useState(false)
 
   const catMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories])
   const range = getMonthRange(year, month)
@@ -83,12 +85,20 @@ export function TransactionList() {
             今天
           </button>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" /> 记一笔
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowScreenshot(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" /> 截图导入
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> 记一笔
+          </button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -222,6 +232,9 @@ export function TransactionList() {
           transaction={editing}
           onClose={handleCloseForm}
         />
+      )}
+      {showScreenshot && (
+        <ScreenshotImport onClose={() => setShowScreenshot(false)} />
       )}
     </div>
   )
