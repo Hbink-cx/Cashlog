@@ -66,15 +66,17 @@ interface BillItem {
   id: number
   merchant: string
   amount: number
+  type: 'income' | 'expense'
   date: string
   suggestedCat: string | null
 }
 
-// ── 通用解析（微信 + 支付宝共用） ──
-function parseBills(lines: { text: string; bbox: { y0: number } }[]): BillItem[] {
+// ── 微信解析 ──
+function parseWeChat(lines: { text: string; bbox: { y0: number } }[]): BillItem[] {
   const items: BillItem[] = []
   let id = 0, lastMerchant = ''
-  const amtRe = /^[+\-]?\s?\d+(\.\d{2})?$/
+  const amtRe = /^([+\-])\s?\d+(\.\d{2})?$/
+  const timeRe = /(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s?\d{2}:\d{2}/
 
   for (let i = 0; i < lines.length; i++) {
     const txt = lines[i].text.trim()
@@ -83,7 +85,7 @@ function parseBills(lines: { text: string; bbox: { y0: number } }[]): BillItem[]
     if (NOISE_WORDS.test(txt) || NOISE_PARTIAL.test(txt)) continue
     if (txt.length < 2 || txt.length > 40) continue
 
-    // 检测金额行（+/− 可选）
+    // 检测金额行
     if (amtRe.test(txt)) {
       const val = parseFloat(txt.replace(/[^0-9.]/g, ''))
       if (val <= 0.01 || val >= 1e6) continue
@@ -100,13 +102,70 @@ function parseBills(lines: { text: string; bbox: { y0: number } }[]): BillItem[]
       }
       lastMerchant = '' // consume
 
+      // 上下找日期
+      let date = todayStr()
+      for (let d = i - 1; d >= 0 && d >= i - 3; d--) {
+        const m = lines[d].text.trim().match(timeRe)
+        if (m) { date = m[1].replace(/\//g, '-'); break }
+      }
+      if (date === todayStr()) {
+        for (let d = i + 1; d < lines.length && d <= i + 2; d++) {
+          const m = lines[d].text.trim().match(timeRe)
+          if (m) { date = m[1].replace(/\//g, '-'); break }
+        }
+      }
+
       items.push({
         id: id++, merchant: merchant || '未知商户', amount: val,
-        date: todayStr(), // 默认当天，用户手动改
+        type: 'expense', date,
         suggestedCat: matchCat(merchant || txt, 'expense'),
       })
     } else {
-      // 非金额行，暂存为候补商户名
+      lastMerchant = txt
+    }
+  }
+  return items
+}
+
+// ── 支付宝解析 ──
+function parseAlipay(lines: { text: string; bbox: { y0: number } }[]): BillItem[] {
+  const items: BillItem[] = []
+  let id = 0, lastMerchant = ''
+  const amtRe = /^([+\-])\s?\d+(\.\d{2})?$/
+  const timeRe = /(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s?\d{2}:\d{2}/
+
+  for (let i = 0; i < lines.length; i++) {
+    const txt = lines[i].text.trim()
+    if (NOISE_WORDS.test(txt) || NOISE_PARTIAL.test(txt)) continue
+    if (txt.length < 2 || txt.length > 36) continue
+
+    if (amtRe.test(txt)) {
+      const val = parseFloat(txt.replace(/[^0-9.]/g, ''))
+      if (val <= 0.01 || val >= 1e6) continue
+
+      let merchant = lastMerchant
+      if (!merchant) {
+        for (let j = i - 1; j >= 0 && j >= i - 3; j--) {
+          const up = lines[j].text.trim()
+          if (!NOISE_WORDS.test(up) && !amtRe.test(up) && !NOISE_PARTIAL.test(up) && up.length >= 2 && !/^\d/.test(up)) {
+            merchant = up; break
+          }
+        }
+      }
+      lastMerchant = ''
+
+      let date = todayStr()
+      for (let d = i - 1; d >= 0 && d >= i - 3; d--) {
+        const m = lines[d].text.trim().match(timeRe)
+        if (m) { date = m[1].replace(/\//g, '-'); break }
+      }
+
+      items.push({
+        id: id++, merchant: merchant || '未知商户', amount: val,
+        type: 'expense', date,
+        suggestedCat: matchCat(merchant || txt, 'expense'),
+      })
+    } else {
       lastMerchant = txt
     }
   }
@@ -126,7 +185,6 @@ const SOURCE_NAMES: Record<string, string> = { wechat: '微信', alipay: '支付
 
 // ── 编辑条目 ──
 interface EditingItem extends BillItem {
-  type: 'income' | 'expense'
   categoryId: string
   desc: string
 }
@@ -169,7 +227,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
 
       // 使用 lines（带 bbox）的结构化数据
       const rawText = data.text || ''
-      const lines = (data.lines || []).map((l: any) => ({ text: l.text, bbox: { y0: l.bbox.y0 } }))
+      const lines = (data.lines || []).map(l => ({ text: l.text, bbox: { y0: l.bbox.y0 } }))
       setRawLines(lines.map(l => `${l.text} (y:${l.bbox.y0})`).join('\n'))
 
       if (lines.length < 3) {
@@ -180,7 +238,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       const src = detectSource(rawText)
       setSource(src)
 
-      let items = parseBills(lines)
+      let items = src === 'alipay' ? parseAlipay(lines) : parseWeChat(lines)
 
       if (items.length === 0) {
         setError('未找到交易记录，请确认截图为微信/支付宝账单列表页')
@@ -188,10 +246,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       }
 
       const edits: EditingItem[] = items.map(it => ({
-        ...it,
-        type: 'expense' as const,           // 全部默认支出
-        categoryId: it.suggestedCat || '',  // 自动匹配支出分类
-        date: todayStr(),                   // 默认当天
+        ...it, categoryId: it.suggestedCat || '',
         desc: `${SOURCE_NAMES[src]} · ${it.merchant}`,
       }))
       setEditItems(edits)
@@ -253,7 +308,6 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
           <div className="p-4 space-y-3">
             <div className="flex items-center gap-3 px-1">
               <span className="text-lg">{SOURCE_ICONS[source]}</span><span className="font-medium">{SOURCE_NAMES[source]}账单</span>
-              <span className="text-xs text-muted-foreground ml-2">默认支出，点击箭头切换收入</span>
               <div className="flex items-center gap-2 ml-auto text-xs">
                 {incN>0&&<span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 rounded-full">收 {incN}</span>}
                 {expN>0&&<span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full">支 {expN}</span>}
@@ -264,7 +318,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
               {editItems.map(item=>{
                 const cats=item.type==='income'?catInc:catExp
                 return(<div key={item.id} className={cn("flex items-center gap-2 p-3 rounded-xl group",item.type==='income'?"bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200/50":"bg-red-50/60 dark:bg-red-950/20 border-red-200/50","border")}>
-                  <button onClick={()=>toggleType(item.id)} className="flex-shrink-0 p-1.5 rounded-lg" style={{backgroundColor:item.type==='income'?'#dcfce7':'#fecaca'}} title="点击切换收入/支出">
+                  <button onClick={()=>toggleType(item.id)} className="flex-shrink-0 p-1.5 rounded-lg" style={{backgroundColor:item.type==='income'?'#dcfce7':'#fecaca'}} title="切换">
                     {item.type==='income'?<TrendingUp className="w-4 h-4 text-emerald-600"/>:<TrendingDown className="w-4 h-4 text-red-500"/>}
                   </button>
                   <div className="flex-1 min-w-0 space-y-2">
