@@ -22,16 +22,28 @@ jobs:
       - run: npm install
       - run: npm run build
 
-      - name: Setup Android SDK path
-        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+      - name: Install Android SDK
+        run: |
+          set -e
+          
+          # Download cmdline-tools
+          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -o /tmp/cmdline.zip
+          unzip -qo /tmp/cmdline.zip -d /tmp
+          
+          # Install SDK 33
+          yes | /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk --licenses > /dev/null 2>&1
+          /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk "platforms;android-33" "build-tools;33.0.2" > /dev/null 2>&1
+          
+          echo "sdk.dir=/tmp/sdk" > android/local.properties
+          echo "Android SDK installed to /tmp/sdk"
 
-      - name: Verify
-        run: ls $ANDROID_HOME/platforms/ && ls $ANDROID_HOME/build-tools/
-
-      - run: npx cap sync android
-      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
-          name: 个人理财助手-android
+          name: Cashlog-Android
           path: android/app/build/outputs/apk/debug/*.apk
