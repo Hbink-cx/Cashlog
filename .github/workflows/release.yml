@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -82,7 +83,6 @@ jobs:
       - run: npm run build
       - name: Setup Android SDK 35
         run: |
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list 2>/dev/null | head -1 || echo "Trying apt..."
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses 2>/dev/null || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || true
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
