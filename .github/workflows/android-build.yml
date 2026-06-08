@@ -22,24 +22,32 @@ jobs:
       - run: npm install
       - run: npm run build
 
-      - name: Download Android SDK
+      - name: Setup Android SDK
         run: |
-          curl -sLO https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -qo commandlinetools-linux-11076708_latest.zip
-          mkdir -p ~/android-sdk/cmdline-tools
-          mv cmdline-tools ~/android-sdk/cmdline-tools/latest
-          yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
-          ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platforms;android-34" "build-tools;34.0.0"
-          echo "sdk.dir=$HOME/android-sdk" > android/local.properties
+          set -e
+          SDK=$HOME/android-sdk
+          echo "SDK dir: $SDK"
 
-      - name: Sync Capacitor
-        run: npx cap sync android
+          # Download commandline tools
+          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdline.zip
+          unzip -qo /tmp/cmdline.zip -d /tmp/cmdline
+          mkdir -p $SDK/cmdline-tools
+          mv /tmp/cmdline/cmdline-tools $SDK/cmdline-tools/latest
 
-      - name: Build APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+          # Accept licenses
+          yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK --licenses
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          # Install platform and build tools
+          $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK "platforms;android-34" "build-tools;34.0.0"
+
+          # Write config
+          echo "sdk.dir=$SDK" > $GITHUB_WORKSPACE/android/local.properties
+          cat $GITHUB_WORKSPACE/android/local.properties
+
+      - run: npx cap sync android
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
         with:
           name: 个人理财助手-android
           path: android/app/build/outputs/apk/debug/*.apk
