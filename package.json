@@ -58,8 +58,7 @@
     "mac": {
       "target": [{ "target": "dmg", "arch": ["x64"] }],
       "icon": "public/icon.png",
-      "category": "public.app-category.finance",
-      "identity": null
+      "category": "public.app-category.finance"
     },
     "linux": {
       "target": [{ "target": "AppImage", "arch": ["x64"] }],

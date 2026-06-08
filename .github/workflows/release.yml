@@ -35,12 +35,14 @@ jobs:
       - run: npm install
       - run: npm run build
       - name: Electron pack (unpacked)
-        run: npx electron-builder --mac --x64 --dir
+        run: |
+          export CSC_IDENTITY_AUTO_DISCOVERY=false
+          npx electron-builder --mac --x64 --dir
         timeout-minutes: 15
       - name: Zip macOS build
         run: |
           cd release
-          zip -r 个人理财助手-macos-x64.zip mac*
+          zip -r 个人理财助手-macos-x64.zip mac
       - uses: actions/upload-artifact@v4
         with:
           name: 个人理财助手-macOS

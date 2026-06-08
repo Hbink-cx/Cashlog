@@ -181,7 +181,7 @@
 
 ### 下载安装
 
-从 [Releases](../../releases) 页面下载对应平台安装包：
+从 [Releases](https://github.com/Hbink-cx/finance-app/releases) 页面下载对应平台安装包：
 
 | 平台 | 文件 |
 |------|------|
@@ -195,7 +195,7 @@ Windows 用户还可以下载源码后运行 `启动理财助手.bat`。
 
 ```bash
 # 克隆
-git clone https://github.com/你的用户名/finance-app.git
+git clone https://github.com/Hbink-cx/finance-app.git
 cd finance-app
 
 # 安装
