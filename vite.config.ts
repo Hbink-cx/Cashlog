@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+﻿import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -17,13 +17,13 @@ export default defineConfig({
       manifest: {
         name: 'Cashlog',
         short_name: 'Cashlog',
-        description: '支持无限级分类的个人收支分析记账软件',
+        description: '鏀寔鏃犻檺绾у垎绫荤殑涓汉鏀舵敮鍒嗘瀽璁拌处杞欢',
         theme_color: '#22c55e',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait-primary',
-        scope: isPages ? '/finance-app/' : '/',
-        start_url: isPages ? '/finance-app/' : '/',
+        scope: isPages ? '/Cashlog/' : '/',
+        start_url: isPages ? '/Cashlog/' : '/',
         icons: [
           { src: 'icon-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -52,10 +52,11 @@ export default defineConfig({
       },
     }),
   ],
-  base: isPages ? '/finance-app/' : './',
+  base: isPages ? '/Cashlog/' : './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
   },
 })
+
