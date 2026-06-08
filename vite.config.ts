@@ -17,7 +17,7 @@ export default defineConfig({
       manifest: {
         name: 'Cashlog',
         short_name: 'Cashlog',
-        description: '最棒的本地端免费开源记账软件',
+        description: 'Best local free open-source finance tracker',
         theme_color: '#22c55e',
         background_color: '#ffffff',
         display: 'standalone',
