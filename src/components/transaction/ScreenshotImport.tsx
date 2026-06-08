@@ -29,11 +29,13 @@ const INCOME_SIGNALS = [
   '提现到账', '退款到账', '别人转', '转账收入', '收钱', '到账', '+¥', '+￥',
 ]
 
-function detectType(line: string, rawText: string): 'income' | 'expense' {
-  const combined = (line + rawText).toLowerCase()
+function detectType(line: string): 'income' | 'expense' {
+  const s = line.toLowerCase()
+  // 独立行内收入关键词检测（只看当前行，不看整张截图）
   for (const sig of INCOME_SIGNALS) {
-    if (combined.includes(sig.toLowerCase())) return 'income'
+    if (s.includes(sig.toLowerCase())) return 'income'
   }
+  // 如果行内没有明确收入信号，默认为支出
   return 'expense'
 }
 
@@ -97,7 +99,7 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
         if (seen.has(dedupKey)) continue
         seen.add(dedupKey)
 
-        const txType = detectType(line, rawText)
+        const txType = detectType(line)
         items.push({
           id: id++,
           merchant,
