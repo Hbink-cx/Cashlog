@@ -2,11 +2,11 @@
 
 > 支持**无限级子分类**的桌面记账软件 —— 数据始终存于本地，隐私无忧。
 
-[![Windows](https://img.shields.io/badge/Windows-✅-0078D6?logo=windows&style=flat-square)](#)
-[![macOS](https://img.shields.io/badge/macOS-✅-000000?logo=apple&style=flat-square)](#)
-[![Linux](https://img.shields.io/badge/Linux-✅-FCC624?logo=linux&style=flat-square)](#)
+[![Windows](https://img.shields.io/badge/Windows-✅-0078D6?logo=windows&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
+[![macOS](https://img.shields.io/badge/macOS-✅-000000?logo=apple&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
+[![Linux](https://img.shields.io/badge/Linux-✅-FCC624?logo=linux&style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0-blue?style=flat-square)](../../releases)
+[![Release](https://img.shields.io/badge/release-v1.0.0-blue?style=flat-square)](https://github.com/Hbink-cx/finance-app/releases/latest)
 
 ---
 
@@ -185,9 +185,9 @@
 
 | 平台 | 文件 |
 |------|------|
-| 🪟 Windows | `个人理财助手-1.0.0-portable.zip`（解压即用） |
-| 🍎 macOS | `个人理财助手-1.0.0.dmg` |
-| 🐧 Linux | `个人理财助手-1.0.0.AppImage` |
+| 🪟 Windows | `个人理财助手-win-x64.zip` — 解压后双击 `个人理财助手.exe` |
+| 🍎 macOS | `个人理财助手-macos-x64.zip` — 解压运行 |
+| 🐧 Linux | `个人理财助手-linux-x64.tar.gz` — 解压运行 |
 
 Windows 用户还可以下载源码后运行 `启动理财助手.bat`。
 
