@@ -50,7 +50,7 @@
       "dist/**/*",
       "electron/*.cjs",
       "public/icon.png",
-      "public/收款码.jpg"
+      "public/donate.jpg"
     ],
     "win": {
       "target": [

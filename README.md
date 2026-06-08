@@ -320,7 +320,7 @@ npm run build:electron
 如果这个项目对你有帮助，欢迎请作者喝杯咖啡 ☕
 
 <p align="center">
-  <img src="收款码.jpg" width="280" alt="收款码" />
+  <img src="https://github.com/Hbink-cx/finance-app/blob/main/public/donate.jpg?raw=true" width="280" alt="收款码" />
 </p>
 
 ---
