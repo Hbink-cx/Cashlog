@@ -23,21 +23,7 @@ const INCOME_KEYWORDS: [string, string[]][] = [
   ['cat-i-other', ['红包', '转账', '退款', '报销', '退款入账', '转入', '收款', '存入', '提现到账', '别人转']],
 ]
 
-// ── 收入检测关键词（行扫描用） ──
-const INCOME_SIGNALS = [
-  '退款', '入账', '转入', '工资', '奖金', '报销', '红包', '收入', '存入', '收款',
-  '提现到账', '退款到账', '别人转', '转账收入', '收钱', '到账', '+¥', '+￥',
-]
-
-function detectType(line: string): 'income' | 'expense' {
-  const s = line.toLowerCase()
-  // 独立行内收入关键词检测（只看当前行，不看整张截图）
-  for (const sig of INCOME_SIGNALS) {
-    if (s.includes(sig.toLowerCase())) return 'income'
-  }
-  // 如果行内没有明确收入信号，默认为支出
-  return 'expense'
-}
+// ── 用金额前的 +/- 号直接判断收支（微信/支付宝标准格式） ──
 
 function matchCategory(text: string, type: 'income' | 'expense'): string | null {
   const s = text.toLowerCase()
@@ -48,7 +34,12 @@ function matchCategory(text: string, type: 'income' | 'expense'): string | null 
   return null
 }
 
-// ── 批量解析引擎 ──
+// ── 用金额前的 +/- 号直接判断收支（微信/支付宝标准格式） ──
+// 匹配格式：+¥38.00 → 收入，-¥38.00 → 支出
+const SIGNED_AMOUNT_RE = /([+\-−])\s*[¥￥]\s*([0-9,]+\.[0-9]{1,2})/g
+// fallback：无符号的纯金额 ¥38.00
+const PLAIN_AMOUNT_RE = /(?:[¥￥]|RMB|CNY)\s*([0-9,]+\.[0-9]{1,2})/g
+
 interface ParsedItem {
   id: number; merchant: string; amount: number
   type: 'income' | 'expense'; suggestedCategoryId: string | null
@@ -71,46 +62,58 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
   let id = 0
 
   for (const line of lines) {
-    if (/^(合计|总计|小计|支付|付款方式|当前状态|交易时间|商户单号|对方|收单|微信|支付宝)/.test(line)) continue
+    if (/^(合计|总计|小计|支付方式|当前状态|交易时间|商户单号|交易单号|收单)/.test(line)) continue
     if (/^(快捷支付|零钱通|余额宝|花呗|借呗|储蓄卡|信用卡)$/.test(line)) continue
-    if (line.length < 2 || line.length > 80) continue
+    if (line.length < 3 || line.length > 100) continue
     if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(line)) continue
 
-    const amountRegex = /(?:¥|￥|RMB|CNY)?\s*([0-9,]+\.[0-9]{1,2})\s*$/g
-    const amountRegex2 = /(?:[-¥￥]\s*)([0-9,]+\.[0-9]{1,2})/g
+    // ── 先试带 +/- 号的金额（微信/支付宝标准格式） ──
+    let txType: 'income' | 'expense' = 'expense'
+    let val = 0
+    let matchLine = line
 
-    let foundAmount = false
-    for (const regex of [amountRegex, amountRegex2]) {
-      const matches = [...line.matchAll(regex)]
-      for (const m of matches) {
-        const raw = m[1].replace(/,/g, '')
-        const val = parseFloat(raw)
-        if (val <= 0 || val >= 1000000) continue
-
-        let merchant = line
-          .replace(/[-¥￥]\s*[0-9,]+\.[0-9]{1,2}/g, '')
-          .replace(/[0-9:,.]/g, '')
-          .replace(/^\s*[-]+/, '')
-          .trim().slice(0, 40).trim()
-
-        if (!merchant || merchant.length < 1) merchant = '未知商户'
-
-        const dedupKey = `${merchant}-${val}`
-        if (seen.has(dedupKey)) continue
-        seen.add(dedupKey)
-
-        const txType = detectType(line)
-        items.push({
-          id: id++,
-          merchant,
-          amount: val,
-          type: txType,
-          suggestedCategoryId: matchCategory(merchant, txType),
-        })
-        foundAmount = true
+    SIGNED_AMOUNT_RE.lastIndex = 0
+    const signedMatches = [...line.matchAll(SIGNED_AMOUNT_RE)]
+    if (signedMatches.length > 0) {
+      const m = signedMatches[0]
+      txType = (m[1] === '+') ? 'income' : 'expense'
+      val = parseFloat(m[2].replace(/,/g, ''))
+    } else {
+      // ── fallback：无符号金额，全当支出 ──
+      PLAIN_AMOUNT_RE.lastIndex = 0
+      const plainMatches = [...line.matchAll(PLAIN_AMOUNT_RE)]
+      if (plainMatches.length > 0) {
+        val = parseFloat(plainMatches[0][1].replace(/,/g, ''))
+      } else {
+        // ── last try: 行尾数字 ──
+        const tailMatch = line.match(/([0-9,]+\.[0-9]{2})\s*$/)
+        if (tailMatch) val = parseFloat(tailMatch[1].replace(/,/g, ''))
       }
-      if (foundAmount) break
     }
+
+    if (val <= 0 || val >= 1000000) continue
+
+    // Extract merchant: strip amount + sign prefix
+    let merchant = line
+      .replace(/[+\-−]\s*[¥￥]\s*[0-9,]+\.[0-9]{1,2}/g, '')
+      .replace(/[¥￥]\s*[0-9,]+\.[0-9]{1,2}/g, '')
+      .replace(/[0-9:,.]/g, '')
+      .replace(/^[-—\s]+/, '')
+      .trim().slice(0, 40).trim()
+
+    if (!merchant || merchant.length < 1) merchant = '未知商户'
+
+    const dedupKey = `${merchant}-${val}`
+    if (seen.has(dedupKey)) continue
+    seen.add(dedupKey)
+
+    items.push({
+      id: id++,
+      merchant,
+      amount: val,
+      type: txType,
+      suggestedCategoryId: matchCategory(merchant, txType),
+    })
   }
 
   return { items, date, source }
