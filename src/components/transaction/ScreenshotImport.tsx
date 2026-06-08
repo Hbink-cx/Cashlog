@@ -34,23 +34,40 @@ function matchCategory(text: string, type: 'income' | 'expense'): string | null 
   return null
 }
 
-// ── 用金额前的 +/- 号直接判断收支（微信/支付宝标准格式） ──
-// 匹配格式：+¥38.00 → 收入，-¥38.00 → 支出
-const SIGNED_AMOUNT_RE = /([+\-−])\s*[¥￥]\s*([0-9,]+\.[0-9]{1,2})/g
-// fallback：无符号的纯金额 ¥38.00
-const PLAIN_AMOUNT_RE = /(?:[¥￥]|RMB|CNY)\s*([0-9,]+\.[0-9]{1,2})/g
+// ── 收入关键词（仅在无 +/- 号时用作 fallback） ──
+const INCOME_LINE_KEYWORDS = ['收入', '退款', '转入', '入账', '报销', '红包', '收款', '存入', '工资', '奖金', '补贴', '提现到账', '收钱']
+
+function detectTypeFromLine(line: string): 'income' | 'expense' {
+  const s = line.toLowerCase()
+  // 1) 优先用 +/- 符号（微信/支付宝标准格式：+¥ 或 -¥）
+  const signed = line.match(/([+\-−])\s*[¥￥]/)
+  if (signed) return signed[1] === '+' ? 'income' : 'expense'
+  // 2) fallback：行内收入关键词（这些字 OCR 一定能识别）
+  if (INCOME_LINE_KEYWORDS.some(k => s.includes(k.toLowerCase()))) return 'income'
+  return 'expense'
+}
+
+// ── 金额提取（容忍 OCR 噪声：缺少 ¥ 符号、空格、中英文逗号等） ──
+const AMOUNT_IN_LINE_RE = /(?:[+\-−]\s*)?[¥￥]?\s*([0-9,，]+\.[0-9]{2})\b/g
+
+// ── 行内日期提取 ──
+const DATE_IN_ROW_RE = /(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/
 
 interface ParsedItem {
   id: number; merchant: string; amount: number
   type: 'income' | 'expense'; suggestedCategoryId: string | null
+  date: string
 }
 
-function parseTransactions(rawText: string): { items: ParsedItem[]; date: string; source: string } {
+function parseTransactions(rawText: string): { items: ParsedItem[]; source: string } {
   const lines = rawText.split(/\n/).map(l => l.trim()).filter(Boolean)
 
-  let date = todayStr()
-  const dateMatch = rawText.match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/)
-  if (dateMatch) date = `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].padStart(2, '0')}`
+  // 全局默认日期
+  const globalDate = (() => {
+    const m = rawText.match(DATE_IN_ROW_RE)
+    if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
+    return todayStr()
+  })()
 
   let source = 'unknown'
   if (/微信|WeChat|零钱/.test(rawText)) source = 'wechat'
@@ -62,48 +79,43 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
   let id = 0
 
   for (const line of lines) {
-    if (/^(合计|总计|小计|支付方式|当前状态|交易时间|商户单号|交易单号|收单)/.test(line)) continue
+    if (/^(合计|总计|小计|支付方式|当前状态|交易时间|商户单号|交易单号|收单|微信|支付宝)/.test(line)) continue
     if (/^(快捷支付|零钱通|余额宝|花呗|借呗|储蓄卡|信用卡)$/.test(line)) continue
-    if (line.length < 3 || line.length > 100) continue
-    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(line)) continue
+    if (line.length < 3 || line.length > 120) continue
+    // 跳过只有日期和空行的 pure date line (会被当作后续行的日期)
+    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}\s*$/.test(line)) continue
 
-    // ── 先试带 +/- 号的金额（微信/支付宝标准格式） ──
-    let txType: 'income' | 'expense' = 'expense'
-    let val = 0
-    let matchLine = line
+    // 提取金额（匹配所有金额出现）
+    AMOUNT_IN_LINE_RE.lastIndex = 0
+    const amountMatches = [...line.matchAll(AMOUNT_IN_LINE_RE)]
+    if (amountMatches.length === 0) continue
 
-    SIGNED_AMOUNT_RE.lastIndex = 0
-    const signedMatches = [...line.matchAll(SIGNED_AMOUNT_RE)]
-    if (signedMatches.length > 0) {
-      const m = signedMatches[0]
-      txType = (m[1] === '+') ? 'income' : 'expense'
-      val = parseFloat(m[2].replace(/,/g, ''))
-    } else {
-      // ── fallback：无符号金额，全当支出 ──
-      PLAIN_AMOUNT_RE.lastIndex = 0
-      const plainMatches = [...line.matchAll(PLAIN_AMOUNT_RE)]
-      if (plainMatches.length > 0) {
-        val = parseFloat(plainMatches[0][1].replace(/,/g, ''))
-      } else {
-        // ── last try: 行尾数字 ──
-        const tailMatch = line.match(/([0-9,]+\.[0-9]{2})\s*$/)
-        if (tailMatch) val = parseFloat(tailMatch[1].replace(/,/g, ''))
-      }
-    }
-
+    // 取该行最后一个金额（账单行尾的金额最有意义）
+    const lastAmountStr = amountMatches[amountMatches.length - 1][1].replace(/[,，]/g, '')
+    const val = parseFloat(lastAmountStr)
     if (val <= 0 || val >= 1000000) continue
 
-    // Extract merchant: strip amount + sign prefix
+    // 收支类型判断
+    const txType = detectTypeFromLine(line)
+
+    // 行内日期
+    const rowDateMatch = line.match(DATE_IN_ROW_RE)
+    const rowDate = rowDateMatch
+      ? `${rowDateMatch[1]}-${rowDateMatch[2].padStart(2, '0')}-${rowDateMatch[3].padStart(2, '0')}`
+      : globalDate
+
+    // 提取商户：去掉金额和日期部分
     let merchant = line
-      .replace(/[+\-−]\s*[¥￥]\s*[0-9,]+\.[0-9]{1,2}/g, '')
-      .replace(/[¥￥]\s*[0-9,]+\.[0-9]{1,2}/g, '')
-      .replace(/[0-9:,.]/g, '')
-      .replace(/^[-—\s]+/, '')
-      .trim().slice(0, 40).trim()
+      .replace(/(?:[+\-−]\s*)?[¥￥]?\s*[0-9,，]+\.[0-9]{2}/g, '')
+      .replace(/\d{4}[-/]\d{1,2}[-/]\d{1,2}/g, '')
+      .replace(/^\s*[-—.–·•\s]+/, '')
+      .trim()
+      .slice(0, 40)
+      .trim()
 
     if (!merchant || merchant.length < 1) merchant = '未知商户'
 
-    const dedupKey = `${merchant}-${val}`
+    const dedupKey = `${merchant}-${val}-${rowDate}`
     if (seen.has(dedupKey)) continue
     seen.add(dedupKey)
 
@@ -113,10 +125,11 @@ function parseTransactions(rawText: string): { items: ParsedItem[]; date: string
       amount: val,
       type: txType,
       suggestedCategoryId: matchCategory(merchant, txType),
+      date: rowDate,
     })
   }
 
-  return { items, date, source }
+  return { items, source }
 }
 
 const SOURCE_ICONS: Record<string, string> = { wechat: '💚', alipay: '💙', bank: '🏦', unknown: '📷' }
@@ -137,7 +150,6 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('')
   const [rawText, setRawText] = useState('')
   const [source, setSource] = useState('unknown')
-  const [date, setDate] = useState(todayStr())
   const [editItems, setEditItems] = useState<EditingItem[]>([])
   const [showRaw, setShowRaw] = useState(false)
 
@@ -173,7 +185,6 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
       setRawText(text)
       const result = parseTransactions(text)
       setSource(result.source)
-      setDate(result.date)
 
       if (result.items.length === 0) {
         setError('未找到交易记录，请确认截图包含金额和商户信息')
@@ -217,7 +228,7 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
           amount: item.amount,
           type: item.type,
           categoryId: item.categoryId,
-          date,
+          date: item.date,
           description: item.desc || item.merchant,
         })
         count++
@@ -295,8 +306,6 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
                 {incomeCount > 0 && <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">收 {incomeCount}</span>}
                 {expenseCount > 0 && <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full">支 {expenseCount}</span>}
               </div>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                className="px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
 
             <div className="space-y-2">
@@ -341,6 +350,8 @@ export function ScreenshotImport({ onClose }: { onClose: () => void }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <input type="date" value={item.date} onChange={e => updateItem(item.id, 'date', e.target.value)}
+                          className="w-32 px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring flex-shrink-0" />
                         <select value={item.categoryId} onChange={e => updateItem(item.id, 'categoryId', e.target.value)}
                           className="flex-1 px-2 py-1 bg-background border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring">
                           <option value="">选择{ item.type === 'income' ? '收入' : '支出'}分类</option>
