@@ -1,4 +1,4 @@
-﻿import { defineConfig } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -17,7 +17,7 @@ export default defineConfig({
       manifest: {
         name: 'Cashlog',
         short_name: 'Cashlog',
-        description: '鏀寔鏃犻檺绾у垎绫荤殑涓汉鏀舵敮鍒嗘瀽璁拌处杞欢',
+        description: '最棒的本地端免费开源记账软件',
         theme_color: '#22c55e',
         background_color: '#ffffff',
         display: 'standalone',
@@ -43,11 +43,6 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'tesseract-lang', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
           },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: { cacheName: 'google-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 } },
-          },
         ],
       },
     }),
@@ -59,4 +54,3 @@ export default defineConfig({
     },
   },
 })
-
