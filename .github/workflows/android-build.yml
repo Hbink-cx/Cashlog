@@ -22,13 +22,17 @@ jobs:
       - run: npm install
       - run: npm run build
 
-      - name: Install Android SDK 35
+      - name: Setup Android SDK
         run: |
-          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cli.zip
-          unzip -qo /tmp/cli.zip -d /tmp
-          yes | /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk --licenses > /dev/null 2>&1
-          /tmp/cmdline-tools/bin/sdkmanager --sdk_root=/tmp/sdk "platforms;android-35" "build-tools;35.0.0"
-          echo "sdk.dir=/tmp/sdk" > android/local.properties
+          SDK=/tmp/android-sdk
+          mkdir -p $SDK/cmdline-tools
+          cd $SDK/cmdline-tools
+          curl -sL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cli.zip
+          unzip -qo cli.zip && mv cmdline-tools latest && rm cli.zip
+          yes | ./latest/bin/sdkmanager --sdk_root=$SDK --licenses > /dev/null 2>&1
+          ./latest/bin/sdkmanager --sdk_root=$SDK "platforms;android-35" "build-tools;35.0.0" > /dev/null 2>&1
+          echo "sdk.dir=$SDK" > android/local.properties
+          echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
 
       - run: npx cap sync android
 
@@ -37,5 +41,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Cashlog-Android
+          name: Cashlog-Android-APK
           path: android/app/build/outputs/apk/debug/*.apk
